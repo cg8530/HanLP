@@ -1,8 +1,8 @@
 package com.hankcs.hanlp.summary;
 
 
+import com.hankcs.hanlp.algorithm.MaxHeap;
 import com.hankcs.hanlp.seg.common.Term;
-import com.hankcs.hanlp.tokenizer.StandardTokenizer;
 
 import java.util.*;
 
@@ -40,10 +40,67 @@ public class TextRankKeyword extends KeywordExtractor
         return textRankKeyword.getKeyword(document);
     }
 
+    /**
+     * 提取关键词
+     * @param content
+     * @return
+     */
     public List<String> getKeyword(String content)
     {
-        List<Term> termList = StandardTokenizer.segment(content);
-        List<String> wordList = new ArrayList<String>();
+        Set<Map.Entry<String, Float>> entrySet = getTermAndRank(content, nKeyword).entrySet();
+        List<String> result = new ArrayList<String>(entrySet.size());
+        for (Map.Entry<String, Float> entry : entrySet)
+        {
+            result.add(entry.getKey());
+        }
+        return result;
+    }
+
+    /**
+     * 返回全部分词结果和对应的rank
+     * @param content
+     * @return
+     */
+    public Map<String,Float> getTermAndRank(String content)
+    {
+        assert content != null;
+        List<Term> termList = defaultSegment.seg(content);
+        return getRank(termList);
+    }
+
+    /**
+     * 返回分数最高的前size个分词结果和对应的rank
+     * @param content
+     * @param size
+     * @return
+     */
+    public Map<String,Float> getTermAndRank(String content, Integer size)
+    {
+        Map<String, Float> map = getTermAndRank(content);
+        Map<String, Float> result = new LinkedHashMap<String, Float>();
+        for (Map.Entry<String, Float> entry : new MaxHeap<Map.Entry<String, Float>>(size, new Comparator<Map.Entry<String, Float>>()
+        {
+            @Override
+            public int compare(Map.Entry<String, Float> o1, Map.Entry<String, Float> o2)
+            {
+                return o1.getValue().compareTo(o2.getValue());
+            }
+        }).addAll(map.entrySet()).toList())
+        {
+            result.put(entry.getKey(), entry.getValue());
+        }
+
+        return result;
+    }
+
+    /**
+     * 使用已经分好的词来计算rank
+     * @param termList
+     * @return
+     */
+    public Map<String,Float> getRank(List<Term> termList)
+    {
+        List<String> wordList = new ArrayList<String>(termList.size());
         for (Term t : termList)
         {
             if (shouldInclude(t))
@@ -76,7 +133,6 @@ public class TextRankKeyword extends KeywordExtractor
                     }
 
                     words.get(w1).add(w2);
-                    words.get(w2).add(w1);
                 }
             }
         }
@@ -102,23 +158,7 @@ public class TextRankKeyword extends KeywordExtractor
             score = m;
             if (max_diff <= min_diff) break;
         }
-        List<Map.Entry<String, Float>> entryList = new ArrayList<Map.Entry<String, Float>>(score.entrySet());
-        Collections.sort(entryList, new Comparator<Map.Entry<String, Float>>()
-        {
-            @Override
-            public int compare(Map.Entry<String, Float> o1, Map.Entry<String, Float> o2)
-            {
-                return o2.getValue().compareTo(o1.getValue());
-            }
-        });
-//        System.out.println(entryList);
-        int limit = Math.min(nKeyword, entryList.size());
-        List<String> result = new ArrayList<String>(limit);
-        for (int i = 0; i < limit; ++i)
-        {
-            result.add(entryList.get(i).getKey()) ;
-        }
-        return result;
-    }
 
+        return score;
+    }
 }

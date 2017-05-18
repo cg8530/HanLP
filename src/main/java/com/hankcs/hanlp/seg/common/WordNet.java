@@ -215,6 +215,16 @@ public class WordNet
     }
 
     /**
+     * 获取某一行的逆序迭代器
+     * @param line 行号
+     * @return 逆序迭代器
+     */
+    public Iterator<Vertex> descendingIterator(int line)
+    {
+        return vertexes[line].descendingIterator();
+    }
+
+    /**
      * 获取某一行的第一个节点
      *
      * @param line
@@ -262,6 +272,7 @@ public class WordNet
         {
             String sWord = atomNode.sWord;//init the word
             Nature nature = Nature.n;
+            int id = -1;
             switch (atomNode.nPOS)
             {
                 case Predefine.CT_CHINESE:
@@ -270,22 +281,22 @@ public class WordNet
                 case Predefine.CT_NUM:
                     nature = Nature.m;
                     sWord = "未##数";
+                    id = CoreDictionary.M_WORD_ID;
                     break;
                 case Predefine.CT_DELIMITER:
+                case Predefine.CT_OTHER:
                     nature = Nature.w;
-                    break;
-                case Predefine.CT_LETTER:
-                    nature = Nature.nx;
-                    sWord = "未##串";
                     break;
                 case Predefine.CT_SINGLE://12021-2129-3121
                     nature = Nature.nx;
                     sWord = "未##串";
+                    id = CoreDictionary.X_WORD_ID;
                     break;
                 default:
                     break;
             }
-            add(line + offset, new Vertex(sWord, atomNode.sWord, new CoreDictionary.Attribute(nature, 1)));
+            // 这些通用符的量级都在10万左右
+            add(line + offset, new Vertex(sWord, atomNode.sWord, new CoreDictionary.Attribute(nature, 10000), id));
             offset += atomNode.sWord.length();
         }
     }
